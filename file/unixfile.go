@@ -3,6 +3,8 @@ package unixfile
 import (
 	"context"
 	"errors"
+	"os"
+	"time"
 
 	ft "github.com/ipfs/go-unixfs"
 	uio "github.com/ipfs/go-unixfs/io"
@@ -21,6 +23,8 @@ type ufsDirectory struct {
 	dserv ipld.DAGService
 	dir   uio.Directory
 	size  int64
+	mode  os.FileMode
+	mtime time.Time
 }
 
 type ufsIterator struct {
@@ -122,12 +126,36 @@ func (d *ufsDirectory) Size() (int64, error) {
 	return d.size, nil
 }
 
+func (d *ufsDirectory) MTime() (time.Time, error) {
+	// TODO: consider if we should return a "not provided" error if 0-val
+	// or leave this up to the user
+	return d.mtime, nil
+}
+
+func (d *ufsDirectory) Mode() (os.FileMode, error) {
+	// TODO: consider if we should return a "not provided" error if 0-val
+	// or leave this up to the user
+	return d.mode, nil
+}
+
 type ufsFile struct {
 	uio.DagReader
 }
 
 func (f *ufsFile) Size() (int64, error) {
 	return int64(f.DagReader.Size()), nil
+}
+
+func (f *ufsFile) MTime() (time.Time, error) {
+	// TODO: consider if we should return a "not provided" error if 0-val
+	// or leave this up to the user
+	return f.DagReader.MTime(), nil
+}
+
+func (f *ufsFile) Mode() (os.FileMode, error) {
+	// TODO: consider if we should return a "not provided" error if 0-val
+	// or leave this up to the user
+	return f.DagReader.Mode(), nil
 }
 
 func newUnixfsDir(ctx context.Context, dserv ipld.DAGService, nd *dag.ProtoNode) (files.Directory, error) {

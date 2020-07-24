@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"io"
+	"os"
+	"time"
 
 	ipld "github.com/ipfs/go-ipld-format"
 	mdag "github.com/ipfs/go-merkledag"
@@ -19,6 +21,7 @@ var (
 	ErrSeekNotSupported = errors.New("file does not support seeking")
 )
 
+// NOTE: Review comment: should we do this now (with UFS-1.5)?
 // TODO: Rename the `DagReader` interface, this doesn't read *any* DAG, just
 // DAGs with UnixFS node (and it *belongs* to the `unixfs` package). Some
 // alternatives: `FileReader`, `UnixFSFileReader`, `UnixFSReader`.
@@ -28,7 +31,13 @@ var (
 // types of unixfs/protobuf-encoded nodes.
 type DagReader interface {
 	ReadSeekCloser
+
 	Size() uint64
+
+	// optional UFS-1.5 members
+	Mode() os.FileMode
+	MTime() time.Time
+
 	CtxReadFull(context.Context, []byte) (int, error)
 }
 
@@ -88,6 +97,7 @@ func NewDagReader(ctx context.Context, n ipld.Node, serv ipld.NodeGetter) (DagRe
 
 	ctxWithCancel, cancel := context.WithCancel(ctx)
 
+	//TODO: populate time and mode
 	return &dagReader{
 		ctx:       ctxWithCancel,
 		cancel:    cancel,
@@ -115,6 +125,10 @@ type dagReader struct {
 	// Implements the `Size()` API.
 	size uint64
 
+	//TODO: docs; Implements UFS-1.5 optional members
+	mode  os.FileMode
+	mtime time.Time
+
 	// Current offset for the read head within the DAG file.
 	offset int64
 
@@ -136,6 +150,16 @@ type dagReader struct {
 // Size returns the total size of the data from the DAG structured file.
 func (dr *dagReader) Size() uint64 {
 	return dr.size
+}
+
+//TODO docs
+func (dr *dagReader) MTime() time.Time {
+	return dr.mtime
+}
+
+//TODO docs
+func (dr *dagReader) Mode() os.FileMode {
+	return dr.mode
 }
 
 // Read implements the `io.Reader` interface through the `CtxReadFull`
